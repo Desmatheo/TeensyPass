@@ -7,6 +7,7 @@
 #define Usb 0
 #define SerialUSB 0
 
+
 #if !Osc || OscTDM2Codec || OscCodec
 
 DMAMEM AudioControlCS42448 cs42448_1;      // Contrôleur matériel CsS42448dd
@@ -40,6 +41,8 @@ AudioMixer4              mixer_1a4;
 AudioMixer4              mixer_5et6;  
 AudioMixer4              master;      
 
+#pragma region Test OSC
+
 // 6 canaux hexa vers la Daisy : ports PAIRS 0..10 = slots 0..5
 #if Osc
 AudioConnection c0(osc[0], 0, tdm_daisy_out,  0);
@@ -69,6 +72,9 @@ AudioConnection c2(osc[2], 0, mixer_1a4,  2);
 AudioConnection c3(osc[3], 0, mixer_1a4,  3);
 AudioConnection c4(osc[4], 0, mixer_5et6, 0);
 AudioConnection c5(osc[5], 0, mixer_5et6, 1);
+
+#pragma endregion
+
 #elif USBIn
 AudioConnection c0(usbIn, 0, tdm_daisy_out,  0);
 AudioConnection c1(usbIn, 0, tdm_daisy_out,  2);
@@ -83,6 +89,7 @@ AudioConnection mix2(tdm_daisy_in,  4, mixer_1a4 , 2);
 AudioConnection mix3(tdm_daisy_in,  6, mixer_1a4 , 3);
 AudioConnection mix4(tdm_daisy_in,  8, mixer_5et6, 0);
 AudioConnection mix5(tdm_daisy_in, 10, mixer_5et6, 1);
+
 #else 
 AudioConnection c0(tdm_codec_in, 10, tdm_daisy_out,  0);
 AudioConnection c1(tdm_codec_in,  8, tdm_daisy_out,  2);
@@ -100,39 +107,22 @@ AudioConnection mix4(tdm_daisy_in,  8, mixer_5et6, 0);
 AudioConnection mix5(tdm_daisy_in, 10, mixer_5et6, 1);
 #endif
 
-#if Osc || OscTDM2Codec || OscCodec
-AudioConnection p0(osc[0], 0, peaks[0], 0);
-AudioConnection p1(osc[1], 0, peaks[1], 0);
-AudioConnection p2(osc[2], 0, peaks[2], 0);
-AudioConnection p3(osc[3], 0, peaks[3], 0);
-AudioConnection p4(osc[4], 0, peaks[4], 0);
-AudioConnection p5(osc[5], 0, peaks[5], 0);
-#else
-AudioConnection p0(tdm_codec_in, 10, peaks[0], 0);
-AudioConnection p1(tdm_codec_in,  8, peaks[1], 0);
-AudioConnection p2(tdm_codec_in,  6, peaks[2], 0);
-AudioConnection p3(tdm_codec_in,  4, peaks[3], 0);
-AudioConnection p4(tdm_codec_in,  2, peaks[4], 0);
-AudioConnection p5(tdm_codec_in,  0, peaks[5], 0);
-#endif
 
 AudioConnection mast1(mixer_1a4, 0, master, 0);
 AudioConnection mast2(mixer_5et6, 0, master, 1);
 
-#if Usb
+
 #if USBOut
 AudioConnection p_outL_usb(master, 0, usbOut, 0);
 AudioConnection p_outR_usb(master, 0, usbOut, 1);
 #endif
-#endif
+
 
 #if !Osc || OscTDM2Codec || OscCodec
 AudioConnection c13(master, 0, tdm_codec_out, 12);
 AudioConnection c14(master, 0, tdm_codec_out, 14);
 #endif
 
-// Retour : out[6] de la Daisy = slot 6 = port pair 12 
-AudioConnection c6(tdm_daisy_in, 12, peak_daisy, 0);
 
 const int reset_p = 34; 
 
@@ -152,14 +142,17 @@ void setup()
     delay(10);
 
     if (cs42448_1.enable()) {
-        //Serial.println("configured CS42448");
+        #if SerialUSB
+        Serial.println("configured CS42448");
     } else {
-        //Serial.println("failed to config CS42448");
+        Serial.println("failed to config CS42448");
+        #endif
     }
     
     cs42448_1.inputLevel(1);
     cs42448_1.volume(1.0);
 #endif
+
 #if Osc || OscTDM2Codec || OscCodec
     for(int i = 0; i < 6; i++)
         osc[i].begin(0.5f, 440.0f, WAVEFORM_SINE); // 110..660 Hz
